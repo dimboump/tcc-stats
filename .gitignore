@@ -1,0 +1,15 @@
+.vscode/
+.venv/
+venv/
+__pycache__/
+.mypy_cache/
+.ipynb_checkpoints/
+*.egg-info/
+testing/
+
+*.csv
+*.xls
+*.xlsx
+*.pkl
+*.log
+*.old

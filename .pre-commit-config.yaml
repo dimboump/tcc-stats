@@ -1,10 +1,33 @@
-# See https://pre-commit.com for more information
-# See https://pre-commit.com/hooks.html for more hooks
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:
     -   id: trailing-whitespace
+        name: Trim Trailing Whitespace
     -   id: end-of-file-fixer
+        name: Fix End of Files
     -   id: check-yaml
+        name: Check YAML
     -   id: check-added-large-files
+        name: Check for added large files
+    -   id: detect-private-key
+        name: Detect Private Key
+    -   id: check-merge-conflict
+        name: Check for merge conflicts
+    -   id: requirements-txt-fixer
+        name: Fix `requirements.txt`
+-   repo: https://github.com/asottile/reorder-python-imports
+    rev: v3.10.0
+    hooks:
+    -   id: reorder-python-imports
+        name: Reorder Python Imports
+-   repo: https://github.com/pyCQA/flake8
+    rev: 6.1.0
+    hooks:
+    -   id: flake8
+        name: Flake8
+        args: [--max-line-length=80, --ignore=E226, --extend-ignore=E501]
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.5.1
+    hooks:
+    -   id: mypy
