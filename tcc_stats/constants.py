@@ -17,10 +17,16 @@ COMMANDS = ('extract', 'plot')
 
 CWD = pathlib.Path(os.getcwd())
 
-YEARS = sorted(list(range(2018, datetime.now().year + 1)))
+YEARS = sorted(list(range(2017, datetime.now().year + 1)))
 MONTHS = [calendar.month_name[i] for i in range(1, 13)]
 COLS = ('operator', 'requester_code', 'doc_type', 'fdr_no', 'result', 'pdf',
         'minutes', 'source_lang', 'target_lang')
+TCCERS = {'JDP', 'JM', 'JVAU', 'MK', 'ND', 'SIL', 'VA'}
+
+TITLE = ':bar_chart: :green[T]:red[C]:blue[C] Stats'
+STATE = {
+    'data_files': None,
+}
 
 DESCRIPTION = """\
 Plot TCC statistics for:

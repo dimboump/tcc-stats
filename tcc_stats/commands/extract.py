@@ -157,7 +157,13 @@ def get_history_data(
     return df
 
 
-def preprocess_data(df: pd.DataFrame, verbose: bool = False) -> pd.DataFrame:
+def preprocess_data(
+    df: pd.DataFrame,
+    *,
+    mark_trainees: bool = False,
+    staff: set[str] | Sequence[str] = C.TCCERS,
+    verbose: bool = False
+) -> pd.DataFrame:
     """Perform preprocessing of the data for statistical analysis."""
 
     if verbose:
@@ -170,17 +176,35 @@ def preprocess_data(df: pd.DataFrame, verbose: bool = False) -> pd.DataFrame:
         print(df.sample(sample_size))
 
     # Remove unnecessary columns
-    df = df.drop(['operator', 'fdr_no', 'source_lang', 'target_lang'], axis=1)
+    df = df.drop(['fdr_no', 'source_lang', 'target_lang'], axis=1)
 
-    # Convert 'requester_code' and 'doc_type' to categorical
+    # Extract DG from 'requester_code'
+    df['dg_code'] = df['requester_code'].str.split('-', n=1).str[0]
+
+    # Convert columns to categorical
+    df['operator'] = df['operator'].astype('category')
     df['requester_code'] = df['requester_code'].astype('category')
+    df['dg_code'] = df['dg_code'].astype('category')
     df['doc_type'] = df['doc_type'].astype('category')
+
+    if mark_trainees:
+        df['trainee'] = ~df['operator'].isin(staff)
 
     # Convert 'result' and 'pdf' to boolean
     df['improved'] = df['result'].map(
-        {'OK': True, 'Improved': False}).astype('bool')
+        {'OK': False, 'Improved': True}).astype('bool')
     df = df.drop('result', axis=1)
     df['pdf'] = df['pdf'].map({'yes': True, 'no': False}).astype('bool')
+
+    # Rearrange columns by splitting them right after requester_code
+    # then dg_code, and then the rest, programmatically
+    cols = df.columns.tolist()
+    idx_before = cols.index('requester_code')
+    cols = cols[:idx_before+1] + \
+        ['dg_code'] + \
+        [col for col in cols[idx_before+1:]
+         if col not in ('requester_code', 'dg_code')]
+    df = df[cols]
 
     if verbose:
         print(C.SEP_EQ, "Final DataFrame:", sep="\n", end="\n\n")
