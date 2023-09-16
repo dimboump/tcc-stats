@@ -160,6 +160,7 @@ def get_history_data(
 def preprocess_data(
     df: pd.DataFrame,
     *,
+    confidentials: bool = True,
     mark_trainees: bool = False,
     staff: set[str] | Sequence[str] = C.TCCERS,
     verbose: bool = False
@@ -177,6 +178,17 @@ def preprocess_data(
 
     # Remove unnecessary columns
     df = df.drop(['fdr_no', 'source_lang', 'target_lang'], axis=1)
+
+    # Mark if the document is a Patronage
+    df['patronage'] = df['requester_code'].str.contains('PATRONAGE')
+
+    # Standardize the variations of 'CONFIDENTIAL' in 'requester_code'
+    conf_variations = ['CONFIDENTIALS?', 'Confidentials?']
+    df['requester_code'] = df['requester_code'].str.replace(
+        '|'.join(conf_variations), 'Confidential', regex=True, case=False)
+
+    if not confidentials:
+        df = df[~df['requester_code'].str.contains('Confidential')]
 
     # Extract DG from 'requester_code'
     df['dg_code'] = df['requester_code'].str.split('-', n=1).str[0]

@@ -113,6 +113,13 @@ def app():
 
         st.subheader('**:blue[Data manipulation]**')
 
+        # Exclude confidential requests
+        confidentials = st.checkbox('**Include confidentials**', value=True)
+        if not confidentials:
+            st.warning('**Note:** Excluding confidentials will also affect '
+                       'the number of requests stored in the database.')
+        st.markdown('<hr style="margin: 5px 0 15px;">', unsafe_allow_html=True)
+
         # Distinguish staff and trainees
         mark_trainees = st.checkbox('**Staff vs Trainees**', value=False)
         with_trainees = not mark_trainees
@@ -223,7 +230,8 @@ def app():
             else:
                 filename = f'{year}_all.{ext}'
 
-            df = preprocess_data(df, mark_trainees=mark_trainees, staff=TCCERS)
+            df = preprocess_data(df, confidentials=confidentials,
+                                 mark_trainees=mark_trainees, staff=TCCERS)
             if ext == 'xlsx':
                 df.to_excel(filename, index=False, freeze_panes=(1, 1))
             elif ext == 'csv':
@@ -380,17 +388,19 @@ def app():
         st.markdown('#### Confidential vs Non-Confidential')
         st.subheader('')
 
-        df_conf = df[df['requester_code'] == 'CONFIDENTIAL']
-        st.write(df_conf)
-        df_result = df_conf['improved'].value_counts()
+        # To get the confidentials, we create a new temporary column
+        df['confidential'] = df['requester_code'].str.contains('Confidential')
+        df_result = df['confidential'].value_counts()
         fig, ax = plt.subplots()
-        conf_labels = ['Improved' if i else 'OK' for i in df_result.index]
+        conf_labels = ['Confidential' if i else 'Non-Confidential'
+                       for i in df_result.index]
         ax.pie(df_result, labels=conf_labels, autopct=pie_fmt, startangle=90,
                colors=['#0173b2', '#de8f05'], textprops={'color': 'white'})
         ax.set_title(f'Confidential vs Non-Confidential ({year})', size=16,
                      weight='bold')
         plt.legend(loc='upper right')
         st.pyplot(fig, clear_figure=True)
+        df = df.drop('confidential', axis=1)
 
     with rcol3_1:
         # plot pie chart of PDFs
