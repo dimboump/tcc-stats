@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sqlite3
 from datetime import datetime
 from sqlite3 import Connection as Conn
@@ -77,10 +78,9 @@ def app():
                             label_visibility='collapsed')
 
     with lcol1:
-        files = st.file_uploader('Upload files:', type='csv',
-                                 accept_multiple_files=True,
-                                 label_visibility='collapsed', key='files')
-
+        files = st.file_uploader('Upload files:', type=['xlsx', 'csv'],
+                                 accept_multiple_files=True, key='files',
+                                 label_visibility='collapsed')
         msg1, msg2, msg3 = st.empty(), st.empty(), st.empty()
 
     # sidebar
@@ -139,14 +139,61 @@ def app():
                                 on_click=remove_selected_year)
 
     with rcol1:
-
         if not files:
-            st.info('Upload the `csv` files from the plugin.')
+            st.info('Upload the :orange[`xlsx`] file for the whole year or the '
+                    ':orange[`csv`] files for each month separately.')
         else:
+            C.STATE['files'] = files
             block_download = False
             n_files = len(files)
             filenames = {file.name for file in files}
-            uploaded_months = {int(file.name.split('.')[0]) for file in files}
+            filenames, fileexts = zip(*[os.path.splitext(file)
+                                        for file in filenames])
+            fileexts = set(fileexts)
+            if all([ext == '.xlsx' for ext in fileexts]):
+                if n_files > 1:
+                    msg1.error('Cannot process more than one xlsx file.')
+                    st.stop()
+                msg1.info('Separate sheets were provided.')
+                msg1.info('Checking if the sheets are named correctly...')
+                df = pd.DataFrame()
+                uploaded_months = set()
+                for file in files:
+                    df_sheets = pd.read_excel(file, usecols='A:I', names=C.COLS,
+                                              sheet_name=None, index_col=None)
+                    for i, month_name in enumerate(C.MONTHS, start=1):
+                        sheetname = f"ANTE - {month_name.upper()} {year}"
+                        if isinstance(df_sheets, dict):
+                            df_temp = df_sheets[sheetname]
+                        # add the year and the month to the dataframe
+                        df_temp = df_temp.assign(year=year, month=C.MONTHS[i-1])
+                        df = pd.concat([df, df_temp], ignore_index=True)
+                        uploaded_months.add(i)
+                if uploaded_months != set(range(1, 13)):
+                    msg1.warning('**Not all sheets are named correctly!**')
+                    msg1.warning('**Please rename the sheets and try again.**')
+                    st.stop()
+                msg1.success('All months were provided as sheets.')
+            elif n_files > 1 and all([ext == '.csv' for ext in fileexts]):
+                msg1.info('Separate files were provided.')
+                uploaded_months = {int(file.name.split('.')[0])
+                                   for file in files}
+                dfs = [
+                    (
+                        pd.read_csv(file, index_col=None,
+                                    names=C.COLS, sep=';')
+                        .assign(
+                            year=pd.to_datetime(year, format='%Y').year,
+                            #  assign the month with its name
+                            month=C.MONTHS[int(file.name.split('.')[0]) - 1],
+                        )
+                    )
+                    for file in files
+                ]
+                df = pd.concat(dfs, ignore_index=True)
+            else:
+                msg1.error('Cannot process both xlsx and csv files at once.')
+                st.stop()
             if n_files == 12 and uploaded_months == set(range(1, 13)):
                 msg1.success('All months were provided.')
             elif n_files == 12 and uploaded_months != set(range(1, 13)):
@@ -160,10 +207,8 @@ def app():
 
             data_files = []
             for file in files:
-                if file.name in filenames:
-                    data_files.append(file)
-                    filenames.remove(file.name)
-                    n_files -= 1
+                data_files.append(file)
+                n_files -= 1
             if n_files == 0:
                 msg2.success('All files were loaded successfully.')
                 n_files = len(files)
@@ -177,20 +222,7 @@ def app():
                 filename = f'{year}_{n_files}_month{s}.{ext}'
             else:
                 filename = f'{year}_all.{ext}'
-            st.session_state['filename'] = filename
 
-            dfs = [
-                (
-                    pd.read_csv(file, index_col=None, names=C.COLS, sep=';')
-                    .assign(
-                        year=pd.to_datetime(year, format='%Y').year,
-                        #  assign the month with its name
-                        month=C.MONTHS[int(file.name.split('.')[0]) - 1],
-                    )
-                )
-                for file in data_files
-            ]
-            df = pd.concat(dfs, ignore_index=True)
             df = preprocess_data(df, mark_trainees=mark_trainees, staff=TCCERS)
             if ext == 'xlsx':
                 df.to_excel(filename, index=False, freeze_panes=(1, 1))
