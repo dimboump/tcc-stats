@@ -5,6 +5,7 @@ import sqlite3
 from datetime import datetime
 from sqlite3 import Connection as Conn
 
+import matplotlib as mpl
 import matplotlib.colors as mcolors
 import pandas as pd
 import squarify
@@ -22,6 +23,7 @@ st.set_page_config(
 )
 
 plt.style.use('seaborn-v0_8')
+mpl.rcParams['figure.dpi'] = 180
 
 current_year = datetime.now().year
 
@@ -74,8 +76,8 @@ def app():
     lcol1_1, rcol1_1 = lcol1.columns([0.55, 0.45], gap='medium')
 
     with lcol1_1:
-        year = st.selectbox('Year:', options=reversed(C.YEARS), key='year',
-                            label_visibility='collapsed')
+        year = st.selectbox('Year:', label_visibility='collapsed',
+                            key='year', options=reversed(C.YEARS))
 
     with lcol1:
         files = st.file_uploader('Upload files:', type=['xlsx', 'csv'],
@@ -93,10 +95,8 @@ def app():
 
         history = st.empty()
 
-        # Load the database, get and display the data
         conn = get_conn()
         historical_data = get_tcc_stats(conn)
-        # historical_data = historical_data.rename(columns={'count': 'requests'})
         history.dataframe(
             historical_data,
             use_container_width=True,
@@ -133,13 +133,14 @@ def app():
                                 value=False)
 
     with rcol1_1:
-        # add function and button to delete the selected year from the database
+
         def remove_selected_year() -> None:
             conn = get_conn()
             c = conn.cursor()
             c.execute('DELETE FROM historical_data WHERE year=?', (year,))
             conn.commit()
             st.success(f'Data for **{year}** were deleted from the database.')
+
         testing_mode = st.empty()
         if testing:
             testing_mode.button(f'Remove {year} from database',
@@ -258,7 +259,6 @@ def app():
             updated_data = updated_data.to_dict()['count']
             print("Updated data dict:", updated_data)
 
-            # preview and download the data
             preview = st.empty()
             preview.dataframe(
                 df.sample(10), use_container_width=True,
@@ -332,22 +332,10 @@ def app():
             if show_diff and i > 0:
                 diff = y - list(updated_data.values())[i-1]
                 color = 'green' if diff > 0 else 'red'
-                # make the line go from the height of the previous year's
-                # value to the height of the current year's value
-                # last_requests = list(updated_data.values())[i-1]
                 curr_requests = list(updated_data.values())[i]
-                # first_year_ymin = list(updated_data.values())[0]
                 ax.annotate(f'{diff:+}', (x, y), ha='center', va='bottom',
                             xytext=(x-0.1, curr_requests+100), size=10,
                             color=color, weight='bold', zorder=10, alpha=0.5)
-                # # normalize ymin and ymax to be between 0 and 1
-                # ymin = last_requests / max(updated_data.values()) - first_year_ymin / max(updated_data.values())
-                # ymax = curr_requests / max(updated_data.values()) - first_year_ymin / max(updated_data.values())
-                # ymin = ymin + 0.15
-                # ymax = ymax + 0.15
-                # st.write("ymin:", ymin, "ymax:", ymax)
-                # ax.axvline(x=x, ymin=ymin, ymax=ymax, color=color, zorder=1,
-                #            linestyle=':', alpha=0.5)
             size = 18 if x == year else 14
             color = '#de8f05' if x == year else 'gray'
             ha = 'left'
@@ -370,7 +358,8 @@ def app():
 
     with lcol3_1:
         # plot pie chart of improved vs OK
-        st.markdown('#### Improved vs OK')
+        st.markdown('<h4 style="text-align: center;">Improved vs OK</h4>',
+                    unsafe_allow_html=True)
         st.subheader('')
 
         df_result = df['improved'].value_counts()
@@ -385,18 +374,19 @@ def app():
 
     with ccol3_1:
         # plot pie chart of Confidential vs Non-Confidential
-        st.markdown('#### Confidential vs Non-Confidential')
+        st.markdown('<h4 style="text-align: center;">Confidentials</h4>',
+                    unsafe_allow_html=True)
         st.subheader('')
 
-        # To get the confidentials, we create a new temporary column
-        df['confidential'] = df['requester_code'].str.contains('Confidential')
+        # create a new temporary column to get the confidentials
+        df['confidential'] = df['requester_code'].str.match('Confidential')
         df_result = df['confidential'].value_counts()
         fig, ax = plt.subplots()
         conf_labels = ['Confidential' if i else 'Non-Confidential'
                        for i in df_result.index]
         ax.pie(df_result, labels=conf_labels, autopct=pie_fmt, startangle=90,
                colors=['#0173b2', '#de8f05'], textprops={'color': 'white'})
-        ax.set_title(f'Confidential vs Non-Confidential ({year})', size=16,
+        ax.set_title(f'Confidential Requests ({year})', size=16,
                      weight='bold')
         plt.legend(loc='upper right')
         st.pyplot(fig, clear_figure=True)
@@ -404,7 +394,8 @@ def app():
 
     with rcol3_1:
         # plot pie chart of PDFs
-        st.markdown('#### PDFs vs Non-PDFs')
+        st.markdown('<h4 style="text-align: center;">PDFs vs Non-PDFs</h4>',
+                    unsafe_allow_html=True)
         st.subheader('')
 
         df_result = df['pdf'].value_counts()
@@ -476,7 +467,6 @@ def app():
         columns=['dg_code', 'counts']
     )])
 
-    # remove the rows with 'nan' as dg_code
     df_dg = df_dg[df_dg['dg_code'] != 'nan']
 
     # plot the treemap
@@ -538,42 +528,6 @@ def app():
     ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
     fig.set_size_inches(len(uploaded_months) * 1.5, 6)  # no overlapping labels
     st.pyplot(fig, clear_figure=True)
-
-    # st.divider()
-
-    # st.header(':blue[Step 4.] Plots', anchor='step4')
-
-    # lcol4, rcol4 = st.columns([0.33, 0.67], gap='medium')
-
-    # with lcol4:
-
-    #     plot_type = st.selectbox('Plot type:', disabled=no_step2,
-    #                             options=['scatter', 'bar', 'line', 'pie'],
-    #                             key='plot_type')
-
-    #     output_file = st.text_input('Output name:', disabled=no_step2,
-    #                                 value=f'{year}_{plot_type}.png',
-    #                                 key='output_file')
-
-    #     save_plot = st.checkbox('Save the plot to a file', key='save_plot',
-    #                             value=False, disabled=no_step2)
-
-    # with rcol4:
-    #     plot_space = st.empty()
-
-    #     fig, ax = plt.subplots()
-    #     if plot_type == 'scatter':
-    #         ax.scatter(df['requester_code'], df['minutes'])
-    #         st.pyplot(fig)
-    #     elif plot_type == 'bar':
-    #         ax.bar(df['requester_code'], df['minutes'])
-    #         st.pyplot(fig)
-    #     elif plot_type == 'line':
-    #         ax.plot(df['requester_code'], df['minutes'])
-    #         st.pyplot(fig)
-    #     elif plot_type == 'pie':
-    #         ax.pie(df['minutes'], labels=df['requester_code'])
-    #         st.pyplot(fig)
 
 
 if __name__ == '__main__':

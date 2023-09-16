@@ -179,8 +179,12 @@ def preprocess_data(
     # Remove unnecessary columns
     df = df.drop(['fdr_no', 'source_lang', 'target_lang'], axis=1)
 
-    # Mark if the document is a Patronage
-    df['patronage'] = df['requester_code'].str.contains('PATRONAGE')
+    # Extract DG from 'requester_code'
+    df['dg_code'] = (
+        df['requester_code']
+        .str.split('-', n=1).str[0]
+        .str.split('_', n=1).str[0]  # convert POLDAP_A/B/C/D to just POLDAP
+    )
 
     # Standardize the variations of 'CONFIDENTIAL' in 'requester_code'
     conf_variations = ['CONFIDENTIALS?', 'Confidentials?']
