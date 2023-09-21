@@ -459,11 +459,11 @@ def app():
     df_dg = df_dg.reset_index(drop=True)
 
     # find the DGs with less than 10 requests and group them into 'Other'
-    other = df_dg[df_dg['counts'] < 10]
-    other_count = other['counts'].sum()
+    df_dg_other = df_dg[df_dg['counts'] < 10]
+    df_dg_other_count = df_dg_other['counts'].sum()
     df_dg = df_dg[df_dg['counts'] >= 10]
     df_dg = pd.concat([df_dg, pd.DataFrame(
-        [['Other', other_count]],
+        [['Other', df_dg_other_count]],
         columns=['dg_code', 'counts']
     )])
 
@@ -478,17 +478,40 @@ def app():
     ax.axis('off')
     st.pyplot(fig, clear_figure=True)
 
+    st.divider()
+
     # plot improved per dg_code
     st.markdown('#### Status per Requestor')
     st.subheader('')
 
     df_dg_imp = df.groupby(['dg_code', 'improved']).size().unstack()
-    df_dg_imp = df_dg_imp.fillna(0)
-    df_dg_imp = df_dg_imp.astype(int)
+
+    # create a new column with the total count for each requestor
+    df_dg_imp['total'] = df_dg_imp.sum(axis=1)
+
+    # find the requestors with less than 10 requests and group them into 'Other'
+    df_dg_imp_other = df_dg_imp[df_dg_imp['total'] < 10]
+    df_dg_imp_other_true = df_dg_imp_other[True].sum(axis=0)
+    df_dg_imp_other_false = df_dg_imp_other[False].sum(axis=0)
+    df_dg_imp = df_dg_imp[df_dg_imp['total'] >= 10]
+    df_dg_imp = df_dg_imp.reindex(df_dg_imp.index.tolist() + ['Other'],
+                                  fill_value=0, method=None)
+    df_dg_imp.loc['Other', True] = df_dg_imp_other_true
+    df_dg_imp.loc['Other', False] = df_dg_imp_other_false
+
+    # drop the 'total' column
+    df_dg_imp = df_dg_imp.drop(columns=['total'])
 
     # reindex the dataframe to have all available dg_codes
     dg_codes = list(sorted(df_dg_imp.index.tolist()))
     df_dg_imp = df_dg_imp.reindex(dg_codes, fill_value=0, method=None)
+
+    with st.expander('**Options**'):
+        if alphabetical := st.checkbox('Sort alphabetically', value=False):
+            df_dg_imp = df_dg_imp.sort_index()
+        else:
+            # sort the columns by the total number of requests
+            df_dg_imp = df_dg_imp.sort_values(True, ascending=False)
 
     fig, ax = plt.subplots()
     df_dg_imp.plot(kind='bar', ax=ax, color=['#0173b2', '#de8f05'])
