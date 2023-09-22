@@ -10,9 +10,9 @@ import matplotlib.colors as mcolors
 import numpy as np
 import pandas as pd
 import squarify
+import streamlit as st
 from matplotlib import pyplot as plt
 
-import streamlit as st
 from tcc_stats import constants as C
 from tcc_stats.commands.extract import preprocess_data
 
@@ -496,13 +496,11 @@ def app():
 
     # find the requestors with less than 10 requests and group them into 'Other'
     df_dg_imp_other = df_dg_imp[df_dg_imp['total'] < 10]
-    df_dg_imp_other_true = df_dg_imp_other[True].sum(axis=0)
-    df_dg_imp_other_false = df_dg_imp_other[False].sum(axis=0)
     df_dg_imp = df_dg_imp[df_dg_imp['total'] >= 10]
     df_dg_imp = df_dg_imp.reindex(df_dg_imp.index.tolist() + ['Other'],
                                   fill_value=0, method=None)
-    df_dg_imp.loc['Other', True] = df_dg_imp_other_true
-    df_dg_imp.loc['Other', False] = df_dg_imp_other_false
+    df_dg_imp.loc['Other', True] = df_dg_imp_other[True].sum(axis=0)
+    df_dg_imp.loc['Other', False] = df_dg_imp_other[False].sum(axis=0)
 
     # drop the 'total' column
     df_dg_imp = df_dg_imp.drop(columns=['total'])
@@ -511,7 +509,7 @@ def app():
     dg_codes = list(sorted(df_dg_imp.index.tolist()))
     df_dg_imp = df_dg_imp.reindex(dg_codes, fill_value=0, method=None)
 
-    with st.expander('**Options**'):
+    with st.expander('**Options**', expanded=True):
         if alphabetical := st.checkbox('Sort alphabetically', value=False):  # noqa
             df_dg_imp = df_dg_imp.sort_index()
         else:
@@ -520,7 +518,14 @@ def app():
 
     fig, ax = plt.subplots()
     df_dg_imp.plot(kind='bar', ax=ax, color=['#0173b2', '#de8f05'])
-    ax.set_ylim(0, round(max(df_dg_imp.sum(axis=1)), -2))
+
+    # set ylim to the max OK *or* Improved value rounded to the nearest hundred
+    # if max_value >= 1,000, otherwise rounded to the nearest thousand
+    max_ok = max(df_dg_imp[False])
+    max_imp = max(df_dg_imp[True])
+    round_by = -2 if max(max_ok, max_imp) >= 1000 else -3
+    ax.set_ylim(0, round(max(max_ok, max_imp), round_by))
+
     ax.set_title(f'Status per Requestor ({year})', size=16,
                  weight='bold', pad=60)
     ax.text(0.5, 1.125, f'Total documents checked: {total:,}',

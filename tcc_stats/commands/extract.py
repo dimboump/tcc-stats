@@ -179,13 +179,6 @@ def preprocess_data(
     # Remove unnecessary columns
     df = df.drop(['fdr_no', 'source_lang', 'target_lang'], axis=1)
 
-    # Extract DG from 'requester_code'
-    df['dg_code'] = (
-        df['requester_code']
-        .str.split('-', n=1).str[0]
-        .str.split('_', n=1).str[0]  # convert POLDAP_A/B/C/D to just POLDAP
-    )
-
     # Standardize the variations of 'CONFIDENTIAL' in 'requester_code'
     conf_variations = ['CONFIDENTIALS?', 'Confidentials?']
     df['requester_code'] = df['requester_code'].str.replace(
@@ -195,7 +188,11 @@ def preprocess_data(
         df = df[~df['requester_code'].str.contains('Confidential')]
 
     # Extract DG from 'requester_code'
-    df['dg_code'] = df['requester_code'].str.split('-', n=1).str[0]
+    df['dg_code'] = (
+        df['requester_code']
+        .str.split('-', n=1).str[0]
+        .str.split('_', n=1).str[0]  # convert POLDAP_A/B/C/D to just POLDAP
+    )
 
     # Convert columns to categorical
     df['operator'] = df['operator'].astype('category')
