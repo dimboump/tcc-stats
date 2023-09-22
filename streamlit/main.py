@@ -7,6 +7,7 @@ from sqlite3 import Connection as Conn
 
 import matplotlib as mpl
 import matplotlib.colors as mcolors
+import numpy as np
 import pandas as pd
 import squarify
 from matplotlib import pyplot as plt
@@ -507,7 +508,7 @@ def app():
     df_dg_imp = df_dg_imp.reindex(dg_codes, fill_value=0, method=None)
 
     with st.expander('**Options**'):
-        if alphabetical := st.checkbox('Sort alphabetically', value=False):
+        if alphabetical := st.checkbox('Sort alphabetically', value=False):  # noqa
             df_dg_imp = df_dg_imp.sort_index()
         else:
             # sort the columns by the total number of requests
@@ -549,6 +550,58 @@ def app():
     plt.xticks(size=14, rotation=45, ha='right')
     plt.yticks(size=14)
     ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
+    fig.set_size_inches(len(uploaded_months) * 1.5, 6)  # no overlapping labels
+    st.pyplot(fig, clear_figure=True)
+
+    st.divider()
+
+    st.markdown('#### Time needed')
+    st.subheader('')
+
+    # we need to convert the 'minutes' column to a string and then convert it
+    # into the time segments
+    df_time = df.copy()
+    df['minutes'] = df['minutes'].astype(int)
+    df_time = df_time.assign(
+        duration=pd.cut(
+            df['minutes'],
+            bins=[0, 15, 30, 60, 90, 120, 180,
+                  240, 300, 360, 420, np.inf],
+            labels=['0-15 min', '15-30 min', '30-60 min', '1-1.5 hours',
+                    '1.5-2 hours', '2-3 hours', '3-4 hours', '4-5 hours',
+                    '5-6 hours', '6-7 hours', '7+ hours']
+        )
+    )
+
+    # group by the time segments and count the number of requests
+    df_time = df_time.groupby('duration').size().reset_index(name='counts')
+    df_time = df_time.sort_values('duration', ascending=True)
+    df_time = df_time.set_index('duration')
+
+    # plot the bar chart
+    fig, ax = plt.subplots()
+    df_time.plot(kind='bar', ax=ax, color=['#0173b2'])
+    ax.set_ylim(0, round(max(df_time['counts']), -3))
+    ax.set_title(f'Time needed ({year})', size=16,
+                 weight='bold', pad=60)
+    ax.text(0.5, 1.125, f'Total documents checked: {total:,}',
+            transform=ax.transAxes, size=14, ha='center')
+    # show the values on top of the bars
+    for p in ax.patches:
+        color = '#0173b2'
+        try:
+            requestor_total = \
+                df_time[df_time.index == p.get_x()].sum(axis=1).values[0]
+        except IndexError:
+            requestor_total = 0
+        ax.annotate(f'{p.get_height():,}',
+                    (p.get_x() + p.get_width() / 2., p.get_height()),
+                    ha='center', va='center', size=14, color=color,
+                    xytext=(0, 10), textcoords='offset points')
+    plt.xticks(size=14, rotation=45, ha='right')
+    plt.yticks(size=14)
+    ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
+    ax.get_legend().remove()
     fig.set_size_inches(len(uploaded_months) * 1.5, 6)  # no overlapping labels
     st.pyplot(fig, clear_figure=True)
 
