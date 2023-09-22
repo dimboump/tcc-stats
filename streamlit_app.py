@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import os
-import sqlite3
 from datetime import datetime
-from sqlite3 import Connection as Conn
 
 import matplotlib as mpl
 import matplotlib.colors as mcolors
 import numpy as np
 import pandas as pd
+import s3fs
 import squarify
 import streamlit as st
 from matplotlib import pyplot as plt
@@ -30,41 +29,49 @@ current_year = datetime.now().year
 
 rgba_value = (0.00392156862745098, 0.45098039215686275, 0.6980392156862745, 1.0)
 
+fs = s3fs.S3FileSystem(anon=False)
 
-def get_conn() -> Conn:
-    try:
-        conn = sqlite3.connect('../streamlit/.streamlit/tcc_stats.db')
-    except sqlite3.OperationalError:
-        st.error('Error: Could not connect to the database.')
-        st.stop()
-    return conn
+BUCKET_NAME = 'tcc-stats'
+DATA_FILE = 'tcc_stats.csv'
 
 
-def get_tcc_stats(conn: Conn) -> pd.DataFrame:
-    df = pd.read_sql_query("SELECT * FROM historical_data", conn)
-    return df.set_index('year')
+def load_historical_data() -> pd.DataFrame:
+    # if not os.path.exists(f'{BUCKET_NAME}/{DATA_FILE}'):
+    #     return pd.DataFrame(columns=['year', 'count'])
+    with fs.open(f'{BUCKET_NAME}/{DATA_FILE}', 'r', encoding='utf-8') as f:
+        historical_data = pd.read_csv(f, index_col=0, header=0)
+    return historical_data
 
 
-def update_selected_year(
-    conn: Conn,
-    df: pd.DataFrame,
-    year: int
-) -> pd.DataFrame:
+def save_data(new_data: pd.DataFrame) -> None:
+    with fs.open(f'{BUCKET_NAME}/{DATA_FILE}', 'w', encoding='utf-8') as f:
+        new_data.to_csv(f, index=True, header=True)
+
+
+def update_selected_year(df: pd.DataFrame, year: int) -> pd.DataFrame:
     """Update the historical data in the database with the selected year.
     If the year is already in the database, just update the number of requests.
     Otherwise, add the year and the number of requests to the database."""
     df = df.reset_index()
+    data = load_historical_data()
 
-    c = conn.cursor()
-    c.execute('SELECT * FROM historical_data WHERE year=?', (year,))
-    if c.fetchone() is None:
-        c.execute('INSERT INTO historical_data VALUES (?, ?)', (year, len(df)))
+    if year not in data.index:
+        new_data = pd.DataFrame({'count': [len(df)]}, index=[year])
+        data = pd.concat([data, new_data])
+        data = data.sort_index()
     else:
-        c.execute('UPDATE historical_data SET count=? WHERE year=?',
-                  (len(df), year))
-    conn.commit()
+        data.loc[year, 'count'] = len(df)
 
-    return get_tcc_stats(conn)
+    save_data(data)
+
+    return data
+
+
+def remove_selected_year(historical_data: pd.DataFrame, year: int) -> None:
+    data = historical_data.drop(year, axis=0)
+    with fs.open(f"{BUCKET_NAME}/{DATA_FILE}", 'w', encoding='utf-8') as f:
+        data.to_csv(f, index=True, header=True)
+    st.success(f'Data for **{year}** were deleted from the database.')
 
 
 def app():
@@ -96,8 +103,7 @@ def app():
 
         history = st.empty()
 
-        conn = get_conn()
-        historical_data = get_tcc_stats(conn)
+        historical_data = load_historical_data()
         history.dataframe(
             historical_data,
             use_container_width=True,
@@ -134,18 +140,11 @@ def app():
                                 value=False)
 
     with rcol1_1:
-
-        def remove_selected_year() -> None:
-            conn = get_conn()
-            c = conn.cursor()
-            c.execute('DELETE FROM historical_data WHERE year=?', (year,))
-            conn.commit()
-            st.success(f'Data for **{year}** were deleted from the database.')
-
         testing_mode = st.empty()
         if testing:
             testing_mode.button(f'Remove {year} from database',
-                                on_click=remove_selected_year)
+                                on_click=remove_selected_year,
+                                args=(historical_data, year))
 
     with rcol1:
         if not files:
@@ -247,7 +246,7 @@ def app():
                              f'file{s} were ignored.')
             st.success(f'Extracted the statistics for **{year}**{so_far}.')
 
-            updated_data = update_selected_year(conn, df, year)
+            updated_data = update_selected_year(df, year)
             data_header.header('**Updated data**', divider='gray')
             history.dataframe(
                 updated_data,
