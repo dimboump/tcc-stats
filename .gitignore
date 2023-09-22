@@ -5,7 +5,10 @@ __pycache__/
 .mypy_cache/
 .ipynb_checkpoints/
 *.egg-info/
+
+data/
 testing/
+**/secrets.toml
 
 *.csv
 *.xls
