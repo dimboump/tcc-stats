@@ -409,6 +409,8 @@ def app():
         plt.legend(loc='upper right')
         st.pyplot(fig, clear_figure=True)
 
+    st.divider()
+
     st.markdown('#### Improved vs OK per month')
     st.subheader('')
 
@@ -451,6 +453,8 @@ def app():
     ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
     fig.set_size_inches(len(uploaded_months) * 1.5, 6)  # no overlapping labels
     st.pyplot(fig, clear_figure=True)
+
+    st.divider()
 
     st.markdown('#### Requestors')
     st.subheader('')
