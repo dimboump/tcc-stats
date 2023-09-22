@@ -24,8 +24,9 @@ COLS = ('operator', 'requester_code', 'doc_type', 'fdr_no', 'result', 'pdf',
 TCCERS = {'JDP', 'JM', 'JVAU', 'MK', 'ND', 'SIL', 'VA'}
 
 TITLE = ':bar_chart: :green[T]:red[C]:blue[C] Stats'
+
 STATE = {
-    'data_files': None,
+    'files': None,
 }
 
 DESCRIPTION = """\
