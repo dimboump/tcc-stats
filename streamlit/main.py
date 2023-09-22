@@ -285,7 +285,7 @@ def app():
 
     st.divider()
 
-    st.header(':blue[Step 2.] Exploratory Data Analysis', anchor='step2')
+    st.header(':blue[Step 2:] Exploratory Data Analysis', anchor='step2')
 
     lcol2_1, rcol2_1 = st.columns(2, gap='medium')
     _, ccol2_2, _ = st.columns([0.2, 0.6, 0.2], gap='small')
@@ -352,7 +352,7 @@ def app():
 
     st.divider()
 
-    st.header(':blue[Step 3.] Plots', anchor='step3')
+    st.header(':blue[Step 3:] Plots', anchor='step3')
     st.subheader('')
 
     lcol3_1, ccol3_1, rcol3_1 = st.columns(3, gap='large')
