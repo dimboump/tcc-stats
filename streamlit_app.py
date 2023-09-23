@@ -35,6 +35,43 @@ BUCKET_NAME = 'tcc-stats'
 DATA_FILE = 'tcc_stats.csv'
 
 
+# Basic authentication
+def check_password():
+    """Returns `True` if the user had the correct password."""
+
+    def password_entered():
+        """Checks whether a password entered by the user is correct."""
+        if st.session_state['password'] == st.secrets['password']:
+            st.session_state['password_correct'] = True
+            st.session_state['password'] = None  # don't store password
+        else:
+            st.session_state['password_correct'] = False
+
+    if 'password_correct' not in st.session_state:
+        # First run, show input for password
+        st.text_input(
+            'Password', type='password',
+            on_change=password_entered, key='password'
+        )
+        return False
+    elif not st.session_state['password_correct']:
+        # Password incorrect, show input + error
+        st.text_input(
+            'Password', type='password',
+            on_change=password_entered, key='password'
+        )
+        st.error("😕 Password incorrect")
+        return False
+    else:
+        return True
+
+
+if check_password():
+    st.success("Password correct!")
+else:
+    st.stop()
+
+
 def load_historical_data() -> pd.DataFrame:
     # if not os.path.exists(f'{BUCKET_NAME}/{DATA_FILE}'):
     #     return pd.DataFrame(columns=['year', 'count'])
