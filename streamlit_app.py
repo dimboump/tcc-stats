@@ -66,15 +66,11 @@ def check_password():
         return True
 
 
-if check_password():
-    st.success("Password correct!")
-else:
+if not check_password():
     st.stop()
 
 
 def load_historical_data() -> pd.DataFrame:
-    # if not os.path.exists(f'{BUCKET_NAME}/{DATA_FILE}'):
-    #     return pd.DataFrame(columns=['year', 'count'])
     with fs.open(f'{BUCKET_NAME}/{DATA_FILE}', 'r', encoding='utf-8') as f:
         historical_data = pd.read_csv(f, index_col=0, header=0)
     return historical_data
@@ -173,7 +169,7 @@ def app():
 
         st.subheader('**:blue[Data visualization]**')
 
-        show_diff = st.checkbox('**Show difference with previous year**',
+        show_diff = st.checkbox('**Chiara feature**',
                                 value=False)
 
     with rcol1_1:
@@ -256,6 +252,7 @@ def app():
                 n_files -= 1
             if n_files == 0:
                 msg2.success('All files were loaded successfully.')
+                st.balloons()
                 n_files = len(files)
             else:
                 n_files = len(files) - n_files
@@ -367,10 +364,12 @@ def app():
                 color='#0173b2', linewidth=2, zorder=2)
         for i, (x, y) in enumerate(updated_data.items()):
             if show_diff and i > 0:
-                diff = y - list(updated_data.values())[i-1]
+                counts = list(updated_data.values())
+                diff = y - counts[i-1]
+                diff_perc = round(diff / counts[i-1] * 100, 1)
                 color = 'green' if diff > 0 else 'red'
-                curr_requests = list(updated_data.values())[i]
-                ax.annotate(f'{diff:+}', (x, y), ha='center', va='bottom',
+                curr_requests = counts[i]
+                ax.annotate(f'{diff_perc:+}%', (x, y), ha='center', va='bottom',
                             xytext=(x-0.1, curr_requests+100), size=10,
                             color=color, weight='bold', zorder=10, alpha=0.5)
             size = 18 if x == year else 14
@@ -472,6 +471,7 @@ def app():
                                             p.get_height()),
                     ha='center', va='center', size=14, color=color,
                     xytext=(0, 10), textcoords='offset points')
+
     # Labels based on `improve_labels` but with the total number
     # of requests for the year along with the percentage, e.g.:
     # ['Improved (1,234) (12.3%)', 'OK (4,567) (45.6%)']
@@ -484,6 +484,7 @@ def app():
                f'Improved - {improved_counts:,} ({improved_perc}%)']
     ax.legend(loc='upper center', labels=_labels, ncol=len(_labels),
               bbox_to_anchor=(0.5, 1.1), prop={'weight': 'bold', 'size': 14})
+
     plt.xticks(size=14, rotation=45, ha='right')
     plt.yticks(size=14)
     ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
@@ -512,9 +513,11 @@ def app():
 
     # plot the treemap
     fig, ax = plt.subplots()
-    squarify.plot(sizes=df_dg['counts'], label=df_dg['dg_code'],
+    req_labels = [f'{dg_code}\n{count:,}' for dg_code, count
+                  in zip(df_dg['dg_code'], df_dg['counts'])]
+    squarify.plot(sizes=df_dg['counts'], label=req_labels,
                   color=mcolors.TABLEAU_COLORS,
-                  alpha=0.8, ax=ax, text_kwargs={'size': 6})
+                  alpha=0.8, ax=ax, text_kwargs={'size': 6, 'color': 'white'})
     ax.set_title(f'Requestors ({year})', size=16, weight='bold')
     ax.axis('off')
     st.pyplot(fig, clear_figure=True)
@@ -566,6 +569,7 @@ def app():
                  weight='bold', pad=60)
     ax.text(0.5, 1.125, f'Total documents checked: {total:,}',
             transform=ax.transAxes, size=14, ha='center')
+
     # show the values on top of the bars where their color matches the bar's
     for p in ax.patches:
         color = '#0173b2' if p.get_facecolor() == rgba_value else '#de8f05'
@@ -580,6 +584,7 @@ def app():
                     (p.get_x() + p.get_width() / 2., p.get_height()),
                     ha='center', va='center', size=14, color=color,
                     xytext=(0, 10), textcoords='offset points')
+
     # Labels based on `improve_labels` but with the total number
     # of requests for the year along with the percentage, e.g.:
     # ['Improved (1,234) (12.3%)', 'OK (4,567) (45.6%)']
@@ -592,6 +597,7 @@ def app():
                f'Improved - {improved_counts:,} ({improved_perc}%)']
     ax.legend(loc='upper center', labels=_labels, ncol=len(_labels),
               bbox_to_anchor=(0.5, 1.1), prop={'weight': 'bold', 'size': 14})
+
     plt.xticks(size=14, rotation=45, ha='right')
     plt.yticks(size=14)
     ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
@@ -603,8 +609,8 @@ def app():
     st.markdown('#### Time needed')
     st.subheader('')
 
-    # we need to convert the 'minutes' column to a string and then convert it
-    # into the time segments
+    # we need to convert the 'minutes' column to a string
+    # before converting it into the time segments
     df_time = df.copy()
     df['minutes'] = df['minutes'].astype(int)
     df_time = df_time.assign(
@@ -643,6 +649,7 @@ def app():
                     (p.get_x() + p.get_width() / 2., p.get_height()),
                     ha='center', va='center', size=14, color=color,
                     xytext=(0, 10), textcoords='offset points')
+
     plt.xticks(size=14, rotation=45, ha='right')
     plt.yticks(size=14)
     ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
