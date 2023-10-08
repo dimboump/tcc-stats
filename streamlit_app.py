@@ -378,11 +378,18 @@ def app():
             y_offset = 150
             ax.annotate(f'{y:,}', (x, y), xytext=(x+0.05, y-y_offset), ha=ha,
                         va='bottom', size=size, color=color, weight='bold')
-        ax.set_ylim(round(min(updated_data.values()) - 250, 1),
-                    round(max(updated_data.values()) + 250, -2))
-        ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
-        ax.set_title(f'Number of requests ({min(updated_data.keys())}-'
-                     f'{max(updated_data.keys())})', size=16, weight='bold')
+        data_min = min(updated_data.keys())
+        data_max = max(updated_data.keys())
+        ax.set_xlim(data_min - 1, data_max + 1)
+        ax.set_xticks(range(data_min, data_max + 1))
+        ax.set_ylim(round(min(updated_data.values()) * 0.9, -1),
+                    round(max(updated_data.values()) * 1.1, -2))
+        if hide_yticks:
+            ax.set_yticklabels([])
+        else:
+            ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
+        ax.set_title(f'Number of requests ({data_min}-{data_max})',
+                     size=16, weight='bold')
         st.pyplot(fig, clear_figure=True)
 
     st.divider()
