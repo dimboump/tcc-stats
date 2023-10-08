@@ -131,6 +131,16 @@ def app():
 
         testing = st.checkbox('_:orange[testing mode]_ 🧪', value=False)
 
+        with st.expander("**:blue[What's new (v2023.10.07)]**",
+                         expanded=True):
+            st.markdown("""\
+                - Empty sheets when uploading `xlsx` files are now ignored.
+                - Added option to mark trainees, along with a respective plot.
+                - `CDC` is now included in the list of TCCers.
+                - Bug fixes and performance improvements.
+                - Some UI improvements; icons in the sidebar.
+                """)
+
         data_header = st.empty()
         data_header.header('📉 **Historical data**', divider='gray')
 
