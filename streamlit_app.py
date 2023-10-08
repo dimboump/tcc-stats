@@ -110,7 +110,7 @@ def remove_selected_year(historical_data: pd.DataFrame, year: int) -> None:
 def app():
     st.title(C.TITLE)
 
-    st.header(':blue[Step 1:] Get single file', anchor='step1')
+    st.header(':blue[Step 1️⃣:] Get single file', anchor='step1')
     st.subheader('')
 
     lcol1, rcol1 = st.columns([0.4, 0.6], gap='medium')
@@ -129,10 +129,10 @@ def app():
     # sidebar
     with st.sidebar:
 
-        testing = st.checkbox('_:orange[testing mode]_', value=False)
+        testing = st.checkbox('_:orange[testing mode]_ 🧪', value=False)
 
         data_header = st.empty()
-        data_header.header('**Historical data**', divider='gray')
+        data_header.header('📉 **Historical data**', divider='gray')
 
         history = st.empty()
 
@@ -143,7 +143,7 @@ def app():
             column_config={'_index': st.column_config.NumberColumn(format='%d')}
         )
 
-        st.header('**Options**', divider='gray')
+        st.header('⚙️ **Global options**', divider='gray')
 
         st.subheader('**:blue[Output file]**')
 
@@ -161,16 +161,11 @@ def app():
         st.markdown('<hr style="margin: 5px 0 15px;">', unsafe_allow_html=True)
 
         # Distinguish staff and trainees
-        mark_trainees = st.checkbox('**Staff vs Trainees**', value=False)
+        mark_trainees = st.checkbox('**Mark trainees**', value=False)
         with_trainees = not mark_trainees
         tccers = st.text_input('TCCers (staff):', value=', '.join(C.TCCERS),
                                disabled=with_trainees)
         TCCERS = [tccer.strip() for tccer in tccers.split(',')]
-
-        st.subheader('**:blue[Data visualization]**')
-
-        show_diff = st.checkbox('**Chiara feature**',
-                                value=False)
 
     with rcol1_1:
         testing_mode = st.empty()
@@ -181,8 +176,8 @@ def app():
 
     with rcol1:
         if not files:
-            st.info('Upload the :orange[`xlsx`] file for the whole year or the '
-                    ':orange[`csv`] files for each month separately.')
+            st.info('Upload the :orange[`XLSX`] file for the whole year or the '
+                    ':orange[`CSV`] files for each month separately.')
         else:
             C.STATE['files'] = files
             block_download = False
@@ -211,9 +206,9 @@ def app():
                         df = pd.concat([df, df_temp], ignore_index=True)
                         uploaded_months.add(i)
                 if uploaded_months != set(range(1, 13)):
-                    msg1.warning('**Not all sheets are named correctly!**')
-                    msg1.warning('**Please rename the sheets and try again.**')
-                    st.stop()
+                    msg1.warning('**Not all sheets were provided!**')
+                    msg1.warning('**Statistics were extracted only for the '
+                                 'provided sheets.**')
                 msg1.success('All months were provided as sheets.')
             elif n_files > 1 and all([ext == '.csv' for ext in fileexts]):
                 msg1.info('Separate files were provided.')
@@ -281,7 +276,7 @@ def app():
             st.success(f'Extracted the statistics for **{year}**{so_far}.')
 
             updated_data = update_selected_year(df, year)
-            data_header.header('**Updated data**', divider='gray')
+            data_header.header('📈 **Updated data**', divider='gray')
             history.dataframe(
                 updated_data,
                 use_container_width=True,
@@ -318,7 +313,7 @@ def app():
 
     st.divider()
 
-    st.header(':blue[Step 2:] Exploratory Data Analysis', anchor='step2')
+    st.header(':blue[Step 2️⃣:] Exploratory Data Analysis', anchor='step2')
 
     lcol2_1, rcol2_1 = st.columns(2, gap='medium')
     _, ccol2_2, _ = st.columns([0.2, 0.6, 0.2], gap='small')
@@ -359,6 +354,11 @@ def app():
         st.markdown('#### Number of requests per year')
         st.subheader('')
 
+        with st.expander('**Options**', expanded=True):
+            show_diff = st.checkbox('**Chiara feature (show % differences)**',
+                                    value=True)
+            hide_yticks = st.checkbox('**Hide y-axis ticks**', value=False)
+
         fig, ax = plt.subplots()
         ax.plot(updated_data.keys(), updated_data.values(),
                 color='#0173b2', linewidth=2, zorder=2)
@@ -387,7 +387,7 @@ def app():
 
     st.divider()
 
-    st.header(':blue[Step 3:] Plots', anchor='step3')
+    st.header(':blue[Step 3️⃣:] Plots', anchor='step3')
     st.subheader('')
 
     lcol3_1, ccol3_1, rcol3_1 = st.columns(3, gap='large')
@@ -464,6 +464,7 @@ def app():
                  weight='bold', pad=60)
     ax.text(0.5, 1.125, f'Total documents checked: {total:,}',
             transform=ax.transAxes, size=14, ha='center')
+
     # show the values on top of the bars where their color matches the bar's
     for p in ax.patches:
         color = '#0173b2' if p.get_facecolor() == rgba_value else '#de8f05'
@@ -485,6 +486,7 @@ def app():
     ax.legend(loc='upper center', labels=_labels, ncol=len(_labels),
               bbox_to_anchor=(0.5, 1.1), prop={'weight': 'bold', 'size': 14})
 
+    plt.xlabel('')
     plt.xticks(size=14, rotation=45, ha='right')
     plt.yticks(size=14)
     ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
@@ -549,7 +551,8 @@ def app():
     df_dg_imp = df_dg_imp.reindex(dg_codes, fill_value=0, method=None)
 
     with st.expander('**Options**', expanded=True):
-        if alphabetical := st.checkbox('Sort alphabetically', value=False):  # noqa
+        alphabetical = st.checkbox('Sort alphabetically', value=False)
+        if alphabetical:
             df_dg_imp = df_dg_imp.sort_index()
         else:
             # sort the columns by the total number of requests
@@ -581,9 +584,9 @@ def app():
             requestor_total = 0
             requestor_perc = ''
         ax.annotate(f'{p.get_height():,}{requestor_perc}',
-                    (p.get_x() + p.get_width() / 2., p.get_height()),
-                    ha='center', va='center', size=14, color=color,
-                    xytext=(0, 10), textcoords='offset points')
+                    (p.get_x() + p.get_width() / 2, p.get_height()),
+                    ha='center', va='center', size=12, color=color,
+                    xytext=(0, 6), textcoords='offset points')
 
     # Labels based on `improve_labels` but with the total number
     # of requests for the year along with the percentage, e.g.:
@@ -646,10 +649,11 @@ def app():
         except IndexError:
             requestor_total = 0
         ax.annotate(f'{p.get_height():,}',
-                    (p.get_x() + p.get_width() / 2., p.get_height()),
-                    ha='center', va='center', size=14, color=color,
-                    xytext=(0, 10), textcoords='offset points')
+                    (p.get_x() + p.get_width() / 2, p.get_height()),
+                    ha='center', va='center', size=12, color=color,
+                    xytext=(0, 6), textcoords='offset points')
 
+    plt.xlabel('')
     plt.xticks(size=14, rotation=45, ha='right')
     plt.yticks(size=14)
     ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
