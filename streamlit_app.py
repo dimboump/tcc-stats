@@ -204,7 +204,8 @@ def app():
                         # add the year and the month to the dataframe
                         df_temp = df_temp.assign(year=year, month=C.MONTHS[i-1])
                         df = pd.concat([df, df_temp], ignore_index=True)
-                        uploaded_months.add(i)
+                        if not df_temp.empty:
+                            uploaded_months.add(i)
                 if uploaded_months != set(range(1, 13)):
                     msg1.warning('**Not all sheets were provided!**')
                     msg1.warning('**Statistics were extracted only for the '
