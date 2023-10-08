@@ -14,12 +14,23 @@ YEARS = sorted(list(range(2017, datetime.now().year + 1)))
 MONTHS = [calendar.month_name[i] for i in range(1, 13)]
 COLS = ('operator', 'requester_code', 'doc_type', 'fdr_no', 'result', 'pdf',
         'minutes', 'source_lang', 'target_lang')
-TCCERS = {'JDP', 'JM', 'JVAU', 'MK', 'ND', 'SIL', 'VA'}
+TCCERS = {'CDC', 'jpietranik', 'JDP', 'JM', 'JVAU', 'MK', 'ND', 'SIL', 'VA'}
 
-TITLE = ':bar_chart: :green[T]:red[C]:blue[C] Stats'
+TITLE = ':bar_chart: :blue[TCC Ex-Ante Stats]'
 
 STATE = {
     'files': None,
+}
+
+MPL_STYLES = {
+    s.replace('seaborn-', '').title(): s.replace('seaborn', 'seaborn-v0_8')
+    for s in [
+        'seaborn', 'seaborn-bright', 'seaborn-colorblind', 'seaborn-dark',
+        'seaborn-darkgrid', 'seaborn-dark-palette', 'seaborn-deep',
+        'seaborn-muted', 'seaborn-notebook', 'seaborn-paper', 'seaborn-pastel',
+        'seaborn-poster', 'seaborn-talk', 'seaborn-ticks', 'seaborn-white',
+        'seaborn-whitegrid'
+    ]
 }
 
 DESCRIPTION = """\

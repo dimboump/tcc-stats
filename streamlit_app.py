@@ -110,7 +110,7 @@ def remove_selected_year(historical_data: pd.DataFrame, year: int) -> None:
 def app():
     st.title(C.TITLE)
 
-    st.header(':blue[Step 1:] Get single file', anchor='step1')
+    st.header(':blue[Step 1️⃣:] Get single file', anchor='step1')
     st.subheader('')
 
     lcol1, rcol1 = st.columns([0.4, 0.6], gap='medium')
@@ -129,10 +129,20 @@ def app():
     # sidebar
     with st.sidebar:
 
-        testing = st.checkbox('_:orange[testing mode]_', value=False)
+        testing = st.checkbox('_:orange[testing mode]_ 🧪', value=False)
+
+        with st.expander("**:blue[What's new (v2023.10.07)]**",
+                         expanded=True):
+            st.markdown("""\
+                - Empty sheets when uploading `xlsx` files are now ignored.
+                - Added option to mark trainees, along with a respective plot.
+                - `CDC` is now included in the list of TCCers.
+                - Bug fixes and performance improvements.
+                - Some UI improvements; icons in the sidebar.
+                """)
 
         data_header = st.empty()
-        data_header.header('**Historical data**', divider='gray')
+        data_header.header('📉 **Historical data**', divider='gray')
 
         history = st.empty()
 
@@ -143,7 +153,7 @@ def app():
             column_config={'_index': st.column_config.NumberColumn(format='%d')}
         )
 
-        st.header('**Options**', divider='gray')
+        st.header('⚙️ **Global options**', divider='gray')
 
         st.subheader('**:blue[Output file]**')
 
@@ -161,16 +171,11 @@ def app():
         st.markdown('<hr style="margin: 5px 0 15px;">', unsafe_allow_html=True)
 
         # Distinguish staff and trainees
-        mark_trainees = st.checkbox('**Staff vs Trainees**', value=False)
+        mark_trainees = st.checkbox('**Mark trainees**', value=False)
         with_trainees = not mark_trainees
         tccers = st.text_input('TCCers (staff):', value=', '.join(C.TCCERS),
                                disabled=with_trainees)
         TCCERS = [tccer.strip() for tccer in tccers.split(',')]
-
-        st.subheader('**:blue[Data visualization]**')
-
-        show_diff = st.checkbox('**Chiara feature**',
-                                value=False)
 
     with rcol1_1:
         testing_mode = st.empty()
@@ -181,8 +186,8 @@ def app():
 
     with rcol1:
         if not files:
-            st.info('Upload the :orange[`xlsx`] file for the whole year or the '
-                    ':orange[`csv`] files for each month separately.')
+            st.info('Upload the :orange[`XLSX`] file for the whole year or the '
+                    ':orange[`CSV`] files for each month separately.')
         else:
             C.STATE['files'] = files
             block_download = False
@@ -209,11 +214,12 @@ def app():
                         # add the year and the month to the dataframe
                         df_temp = df_temp.assign(year=year, month=C.MONTHS[i-1])
                         df = pd.concat([df, df_temp], ignore_index=True)
-                        uploaded_months.add(i)
+                        if not df_temp.empty:
+                            uploaded_months.add(i)
                 if uploaded_months != set(range(1, 13)):
-                    msg1.warning('**Not all sheets are named correctly!**')
-                    msg1.warning('**Please rename the sheets and try again.**')
-                    st.stop()
+                    msg1.warning('**Not all sheets were provided!**')
+                    msg1.warning('**Statistics were extracted only for the '
+                                 'provided sheets.**')
                 msg1.success('All months were provided as sheets.')
             elif n_files > 1 and all([ext == '.csv' for ext in fileexts]):
                 msg1.info('Separate files were provided.')
@@ -261,7 +267,8 @@ def app():
 
             if year == current_year and n_files < 12:
                 so_far = ' :red[so far]'
-                filename = f'{year}_{n_files}_month{s}.{ext}'
+                latest_month = C.MONTHS[max(uploaded_months)-1]
+                filename = f'{year}_until_{latest_month}.{ext}'
             else:
                 filename = f'{year}_all.{ext}'
 
@@ -281,7 +288,7 @@ def app():
             st.success(f'Extracted the statistics for **{year}**{so_far}.')
 
             updated_data = update_selected_year(df, year)
-            data_header.header('**Updated data**', divider='gray')
+            data_header.header('📈 **Updated data**', divider='gray')
             history.dataframe(
                 updated_data,
                 use_container_width=True,
@@ -318,7 +325,7 @@ def app():
 
     st.divider()
 
-    st.header(':blue[Step 2:] Exploratory Data Analysis', anchor='step2')
+    st.header(':blue[Step 2️⃣:] Exploratory Data Analysis', anchor='step2')
 
     lcol2_1, rcol2_1 = st.columns(2, gap='medium')
     _, ccol2_2, _ = st.columns([0.2, 0.6, 0.2], gap='small')
@@ -359,6 +366,11 @@ def app():
         st.markdown('#### Number of requests per year')
         st.subheader('')
 
+        with st.expander('**Options**', expanded=True):
+            show_diff = st.checkbox('**Chiara feature (show % differences)**',
+                                    value=True)
+            hide_yticks = st.checkbox('**Hide y-axis ticks**', value=False)
+
         fig, ax = plt.subplots()
         ax.plot(updated_data.keys(), updated_data.values(),
                 color='#0173b2', linewidth=2, zorder=2)
@@ -378,16 +390,23 @@ def app():
             y_offset = 150
             ax.annotate(f'{y:,}', (x, y), xytext=(x+0.05, y-y_offset), ha=ha,
                         va='bottom', size=size, color=color, weight='bold')
-        ax.set_ylim(round(min(updated_data.values()) - 250, 1),
-                    round(max(updated_data.values()) + 250, -2))
-        ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
-        ax.set_title(f'Number of requests ({min(updated_data.keys())}-'
-                     f'{max(updated_data.keys())})', size=16, weight='bold')
+        data_min = min(updated_data.keys())
+        data_max = max(updated_data.keys())
+        ax.set_xlim(data_min - 1, data_max + 1)
+        ax.set_xticks(range(data_min, data_max + 1))
+        ax.set_ylim(round(min(updated_data.values()) * 0.9, -1),
+                    round(max(updated_data.values()) * 1.1, -2))
+        if hide_yticks:
+            ax.set_yticklabels([])
+        else:
+            ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
+        ax.set_title(f'Number of requests ({data_min}-{data_max})',
+                     size=16, weight='bold')
         st.pyplot(fig, clear_figure=True)
 
     st.divider()
 
-    st.header(':blue[Step 3:] Plots', anchor='step3')
+    st.header(':blue[Step 3️⃣:] Plots', anchor='step3')
     st.subheader('')
 
     lcol3_1, ccol3_1, rcol3_1 = st.columns(3, gap='large')
@@ -457,20 +476,47 @@ def app():
     months = list(sorted(df_imp_month.index.tolist(), key=C.MONTHS.index))
     df_imp_month = df_imp_month.reindex(months, fill_value=0, method=None)
 
+    with st.expander('**Options**', expanded=True):
+        plot_type = st.selectbox('Select plot type',
+                                 options=['Bar', 'Line'], index=0)
+
     fig, ax = plt.subplots()
-    df_imp_month.plot(kind='bar', ax=ax, color=['#0173b2', '#de8f05'])
-    ax.set_ylim(0, round(max(df_imp_month.sum(axis=1)), -2))
+
+    plot_type = plot_type.lower()
+    df_imp_month.plot(kind=plot_type, ax=ax, color=['#0173b2', '#de8f05'])
+    if plot_type == 'line':
+        # prevent xtick labels from hiding from the x-axis
+        ax.set_xticks(range(len(df_imp_month.index)))
+        ax.set_xticklabels(df_imp_month.index[::1])  # https://saturncloud.io/blog/how-to-show-more-ticks-on-the-xaxis-in-pandas-plot/
+        for i in ax.lines:
+            i.set_marker('o')
+
+    max_value = max(max(df_imp_month[True]), max(df_imp_month[False]))
+    ax.set_ylim(0, round(max_value * 1.1, -2))
+    # give some space on the left and the right of the plot
+    # ax.set_xlim(df_imp_month.index[0] - pd.Timedelta(days=1),
+    #             df_imp_month.index[-1] + pd.Timedelta(days=1))
     ax.set_title(f'Improved vs OK per month ({year})', size=16,
                  weight='bold', pad=60)
     ax.text(0.5, 1.125, f'Total documents checked: {total:,}',
             transform=ax.transAxes, size=14, ha='center')
+
     # show the values on top of the bars where their color matches the bar's
-    for p in ax.patches:
-        color = '#0173b2' if p.get_facecolor() == rgba_value else '#de8f05'
-        ax.annotate(f'{p.get_height():,}', (p.get_x() + p.get_width() / 2.,
-                                            p.get_height()),
-                    ha='center', va='center', size=14, color=color,
-                    xytext=(0, 10), textcoords='offset points')
+    if plot_type == 'bar':
+        for p in ax.patches:
+            color = '#0173b2' if p.get_facecolor() == rgba_value else '#de8f05'
+            annotation_text = f'{p.get_height():,}'
+            annotation_xy = (p.get_x() + p.get_width() / 2, p.get_height())
+            ax.annotate(annotation_text, annotation_xy,
+                        ha='center', va='center', size=12, color=color,
+                        xytext=(0, 6), textcoords='offset points')
+    elif plot_type == 'line':
+        for i, p in enumerate(ax.lines):
+            # plot a line between the y values of each x value
+            for x, y in zip(p.get_xdata(), p.get_ydata()):
+                ax.annotate(f'{y:,}', (x, y), ha='center', va='bottom',
+                            xytext=(0, 6), textcoords='offset points',
+                            size=12, color=p.get_color())
 
     # Labels based on `improve_labels` but with the total number
     # of requests for the year along with the percentage, e.g.:
@@ -485,6 +531,7 @@ def app():
     ax.legend(loc='upper center', labels=_labels, ncol=len(_labels),
               bbox_to_anchor=(0.5, 1.1), prop={'weight': 'bold', 'size': 14})
 
+    plt.xlabel('')
     plt.xticks(size=14, rotation=45, ha='right')
     plt.yticks(size=14)
     ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
@@ -549,7 +596,8 @@ def app():
     df_dg_imp = df_dg_imp.reindex(dg_codes, fill_value=0, method=None)
 
     with st.expander('**Options**', expanded=True):
-        if alphabetical := st.checkbox('Sort alphabetically', value=False):  # noqa
+        alphabetical = st.checkbox('Sort alphabetically', value=False)
+        if alphabetical:
             df_dg_imp = df_dg_imp.sort_index()
         else:
             # sort the columns by the total number of requests
@@ -560,10 +608,9 @@ def app():
 
     # set ylim to the max OK *or* Improved value rounded to the nearest hundred
     # if max_value >= 1,000, otherwise rounded to the nearest thousand
-    max_ok = max(df_dg_imp[False])
-    max_imp = max(df_dg_imp[True])
-    round_by = -2 if max(max_ok, max_imp) >= 1000 else -3
-    ax.set_ylim(0, round(max(max_ok, max_imp), round_by))
+    max_ok_imp = max(max(df_dg_imp[False]) * 1.1, max(df_dg_imp[True]) * 1.1)
+    round_by = -1 if max_ok_imp >= 100 else -2
+    ax.set_ylim(0, round(max_ok_imp), round_by)
 
     ax.set_title(f'Status per Requestor ({year})', size=16,
                  weight='bold', pad=60)
@@ -581,9 +628,9 @@ def app():
             requestor_total = 0
             requestor_perc = ''
         ax.annotate(f'{p.get_height():,}{requestor_perc}',
-                    (p.get_x() + p.get_width() / 2., p.get_height()),
-                    ha='center', va='center', size=14, color=color,
-                    xytext=(0, 10), textcoords='offset points')
+                    (p.get_x() + p.get_width() / 2, p.get_height()),
+                    ha='center', va='center', size=12, color=color,
+                    xytext=(0, 6), textcoords='offset points')
 
     # Labels based on `improve_labels` but with the total number
     # of requests for the year along with the percentage, e.g.:
@@ -598,6 +645,83 @@ def app():
     ax.legend(loc='upper center', labels=_labels, ncol=len(_labels),
               bbox_to_anchor=(0.5, 1.1), prop={'weight': 'bold', 'size': 14})
 
+    plt.xlabel('')
+    plt.xticks(size=14, rotation=45, ha='right')
+    plt.yticks(size=14)
+    ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
+    fig.set_size_inches(len(uploaded_months) * 1.5, 6)  # no overlapping labels
+    st.pyplot(fig, clear_figure=True)
+
+    st.divider()
+
+    # plot improved per doc_type
+    st.markdown('#### Status per Document Type')
+    st.subheader('')
+
+    df_dt_imp = df.groupby(['doc_type', 'improved']).size().unstack()
+
+    # create a new column with the total count for each doctype
+    df_dt_imp['total'] = df_dt_imp.sum(axis=1)
+
+    # find the doctypes with less than 5 requests and group them into 'Other'
+    df_dt_imp_other = df_dt_imp[df_dt_imp['total'] < 5]
+    df_dt_imp = df_dt_imp[df_dt_imp['total'] >= 5]
+    df_dt_imp = df_dt_imp.reindex(df_dt_imp.index.tolist() + ['Other'],
+                                  fill_value=0, method=None)
+    df_dt_imp.loc['Other', True] = df_dt_imp_other[True].sum(axis=0)
+    df_dt_imp.loc['Other', False] = df_dt_imp_other[False].sum(axis=0)
+
+    # drop the 'total' column
+    df_dt_imp = df_dt_imp.drop(columns=['total'])
+
+    # reindex the dataframe to have all available doc_types
+    doc_types = list(sorted(df_dt_imp.index.tolist()))
+    df_dt_imp = df_dt_imp.reindex(doc_types, fill_value=0, method=None)
+
+    with st.expander('**Options**', expanded=True):
+        if alphabetical := st.checkbox('Sort alphabetically',
+                                       value=False, key='doctypes_alpha'):  # noqa
+            df_dt_imp = df_dt_imp.sort_index()
+        else:
+            # sort the columns by the total number of requests
+            df_dt_imp = df_dt_imp.sort_values(True, ascending=False)
+
+    fig, ax = plt.subplots()
+    df_dt_imp.plot(kind='bar', ax=ax, color=['#0173b2', '#de8f05'])
+
+    # set ylim to the max OK *or* Improved value rounded to the nearest hundred
+    # if max_value >= 1,000, otherwise rounded to the nearest thousand
+    max_ok_imp = max(max(df_dt_imp[False]) * 1.1, max(df_dt_imp[True]) * 1.1)
+    round_by = -1 if max_ok_imp >= 100 else -2
+    ax.set_ylim(0, round(max_ok_imp, round_by))
+
+    ax.set_title(f'Status per document type ({year})', size=16,
+                 weight='bold', pad=60)
+    ax.text(0.5, 1.125, f'Total documents checked: {total:,}',
+            transform=ax.transAxes, size=14, ha='center')
+
+    # show the values on top of the bars where their color matches the bar's
+    for p in ax.patches:
+        color = '#0173b2' if p.get_facecolor() == rgba_value else '#de8f05'
+        ax.annotate(f'{p.get_height():,}',
+                    (p.get_x() + p.get_width() / 2, p.get_height()),
+                    ha='center', va='center', size=12, color=color,
+                    xytext=(0, 6), textcoords='offset points')
+
+    # Labels based on `improve_labels` but with the total number
+    # of requests for the year along with the percentage, e.g.:
+    # ['Improved (1,234) (12.3%)', 'OK (4,567) (45.6%)']
+    improved_counts = len(df[df['improved'].eq(True)])
+    ok_counts = len(df[df['improved'].eq(False)])
+    total = improved_counts + ok_counts
+    improved_perc = round(improved_counts / total * 100, 1)
+    ok_perc = round(ok_counts / total * 100, 1)
+    _labels = [f'OK - {ok_counts:,} ({ok_perc}%)',
+               f'Improved - {improved_counts:,} ({improved_perc}%)']
+    ax.legend(loc='upper center', labels=_labels, ncol=len(_labels),
+              bbox_to_anchor=(0.5, 1.1), prop={'weight': 'bold', 'size': 14})
+
+    plt.xlabel('')
     plt.xticks(size=14, rotation=45, ha='right')
     plt.yticks(size=14)
     ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
@@ -632,7 +756,9 @@ def app():
     # plot the bar chart
     fig, ax = plt.subplots()
     df_time.plot(kind='bar', ax=ax, color=['#0173b2'])
-    ax.set_ylim(0, round(max(df_time['counts']), -3))
+    max_counts = max(df_time['counts']) * 1.1
+    round_by = -2 if max_counts >= 1000 else -3
+    ax.set_ylim(0, round(max_counts, round_by))
     ax.set_title(f'Time needed ({year})', size=16,
                  weight='bold', pad=60)
     ax.text(0.5, 1.125, f'Total documents checked: {total:,}',
@@ -640,22 +766,68 @@ def app():
     # show the values on top of the bars
     for p in ax.patches:
         color = '#0173b2'
-        try:
-            requestor_total = \
-                df_time[df_time.index == p.get_x()].sum(axis=1).values[0]
-        except IndexError:
-            requestor_total = 0
         ax.annotate(f'{p.get_height():,}',
-                    (p.get_x() + p.get_width() / 2., p.get_height()),
-                    ha='center', va='center', size=14, color=color,
-                    xytext=(0, 10), textcoords='offset points')
+                    (p.get_x() + p.get_width() / 2, p.get_height()),
+                    ha='center', va='center', size=12, color=color,
+                    xytext=(0, 6), textcoords='offset points')
 
+    plt.xlabel('')
     plt.xticks(size=14, rotation=45, ha='right')
     plt.yticks(size=14)
     ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
     ax.get_legend().remove()
     fig.set_size_inches(len(uploaded_months) * 1.5, 6)  # no overlapping labels
     st.pyplot(fig, clear_figure=True)
+
+    if mark_trainees:
+        st.divider()
+
+        st.markdown("#### Trainees' Contribution")
+        st.subheader('')
+
+        df_trainees = df.groupby(['month', 'trainee']).size().unstack()
+        df_trainees = df_trainees.fillna(0)
+        df_trainees = df_trainees.astype(int)
+        df_trainees = df_trainees.reindex(months, fill_value=0, method=None)
+
+        # plot the bar chart to show the number of trainees vs staff
+        # per month
+        fig, ax = plt.subplots()
+        df_trainees.plot(kind='bar', ax=ax, color=['#0173b2', '#de8f05'])
+        max_trainees = max(df_trainees[True] * 1.1)
+        max_staff = max(df_trainees[False] * 1.1)
+        round_by = -1 if max(max_trainees, max_staff) >= 100 else -2
+        ax.set_ylim(0, round(max(max_trainees, max_staff), round_by))
+        ax.set_title(f"Trainees' Contribution ({year})", size=16,
+                     weight='bold', pad=60)
+        ax.text(0.5, 1.125, f'Total documents checked: {total:,}',
+                transform=ax.transAxes, size=14, ha='center')
+        # show the values on top of the bars
+        for p in ax.patches:
+            color = '#0173b2' if p.get_facecolor() == rgba_value else '#de8f05'
+            ax.annotate(f'{p.get_height():,}',
+                        (p.get_x() + p.get_width() / 2, p.get_height()),
+                        ha='center', va='center', size=12, color=color,
+                        xytext=(0, 6), textcoords='offset points')
+
+        plt.xlabel('')
+        plt.xticks(size=14, rotation=45, ha='right')
+        plt.yticks(size=14)
+
+        ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
+        trainees_counts = df_trainees[True].sum()
+        staff_counts = df_trainees[False].sum()
+        total = trainees_counts + staff_counts
+        trainees_perc = round(trainees_counts / total * 100, 1)
+        staff_perc = round(staff_counts / total * 100, 1)
+        _labels = [f'Trainees - {trainees_counts:,} ({trainees_perc}%)',
+                   f'Staff - {staff_counts:,} ({staff_perc}%)']
+        ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.1),
+                  labels=_labels, ncol=len(_labels),
+                  prop={'weight': 'bold', 'size': 14})
+
+        fig.set_size_inches(len(uploaded_months) * 1.5, 6)  # no overlapping labels
+        st.pyplot(fig, clear_figure=True)
 
 
 if __name__ == '__main__':
