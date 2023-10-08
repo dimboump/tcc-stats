@@ -257,7 +257,8 @@ def app():
 
             if year == current_year and n_files < 12:
                 so_far = ' :red[so far]'
-                filename = f'{year}_{n_files}_month{s}.{ext}'
+                latest_month = C.MONTHS[max(uploaded_months)-1]
+                filename = f'{year}_until_{latest_month}.{ext}'
             else:
                 filename = f'{year}_all.{ext}'
 
