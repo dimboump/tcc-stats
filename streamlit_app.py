@@ -635,6 +635,83 @@ def app():
     ax.legend(loc='upper center', labels=_labels, ncol=len(_labels),
               bbox_to_anchor=(0.5, 1.1), prop={'weight': 'bold', 'size': 14})
 
+    plt.xlabel('')
+    plt.xticks(size=14, rotation=45, ha='right')
+    plt.yticks(size=14)
+    ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
+    fig.set_size_inches(len(uploaded_months) * 1.5, 6)  # no overlapping labels
+    st.pyplot(fig, clear_figure=True)
+
+    st.divider()
+
+    # plot improved per doc_type
+    st.markdown('#### Status per Document Type')
+    st.subheader('')
+
+    df_dt_imp = df.groupby(['doc_type', 'improved']).size().unstack()
+
+    # create a new column with the total count for each doctype
+    df_dt_imp['total'] = df_dt_imp.sum(axis=1)
+
+    # find the doctypes with less than 5 requests and group them into 'Other'
+    df_dt_imp_other = df_dt_imp[df_dt_imp['total'] < 5]
+    df_dt_imp = df_dt_imp[df_dt_imp['total'] >= 5]
+    df_dt_imp = df_dt_imp.reindex(df_dt_imp.index.tolist() + ['Other'],
+                                  fill_value=0, method=None)
+    df_dt_imp.loc['Other', True] = df_dt_imp_other[True].sum(axis=0)
+    df_dt_imp.loc['Other', False] = df_dt_imp_other[False].sum(axis=0)
+
+    # drop the 'total' column
+    df_dt_imp = df_dt_imp.drop(columns=['total'])
+
+    # reindex the dataframe to have all available doc_types
+    doc_types = list(sorted(df_dt_imp.index.tolist()))
+    df_dt_imp = df_dt_imp.reindex(doc_types, fill_value=0, method=None)
+
+    with st.expander('**Options**', expanded=True):
+        if alphabetical := st.checkbox('Sort alphabetically',
+                                       value=False, key='doctypes_alpha'):  # noqa
+            df_dt_imp = df_dt_imp.sort_index()
+        else:
+            # sort the columns by the total number of requests
+            df_dt_imp = df_dt_imp.sort_values(True, ascending=False)
+
+    fig, ax = plt.subplots()
+    df_dt_imp.plot(kind='bar', ax=ax, color=['#0173b2', '#de8f05'])
+
+    # set ylim to the max OK *or* Improved value rounded to the nearest hundred
+    # if max_value >= 1,000, otherwise rounded to the nearest thousand
+    max_ok_imp = max(max(df_dt_imp[False]) * 1.1, max(df_dt_imp[True]) * 1.1)
+    round_by = -1 if max_ok_imp >= 100 else -2
+    ax.set_ylim(0, round(max_ok_imp, round_by))
+
+    ax.set_title(f'Status per document type ({year})', size=16,
+                 weight='bold', pad=60)
+    ax.text(0.5, 1.125, f'Total documents checked: {total:,}',
+            transform=ax.transAxes, size=14, ha='center')
+
+    # show the values on top of the bars where their color matches the bar's
+    for p in ax.patches:
+        color = '#0173b2' if p.get_facecolor() == rgba_value else '#de8f05'
+        ax.annotate(f'{p.get_height():,}',
+                    (p.get_x() + p.get_width() / 2, p.get_height()),
+                    ha='center', va='center', size=12, color=color,
+                    xytext=(0, 6), textcoords='offset points')
+
+    # Labels based on `improve_labels` but with the total number
+    # of requests for the year along with the percentage, e.g.:
+    # ['Improved (1,234) (12.3%)', 'OK (4,567) (45.6%)']
+    improved_counts = len(df[df['improved'].eq(True)])
+    ok_counts = len(df[df['improved'].eq(False)])
+    total = improved_counts + ok_counts
+    improved_perc = round(improved_counts / total * 100, 1)
+    ok_perc = round(ok_counts / total * 100, 1)
+    _labels = [f'OK - {ok_counts:,} ({ok_perc}%)',
+               f'Improved - {improved_counts:,} ({improved_perc}%)']
+    ax.legend(loc='upper center', labels=_labels, ncol=len(_labels),
+              bbox_to_anchor=(0.5, 1.1), prop={'weight': 'bold', 'size': 14})
+
+    plt.xlabel('')
     plt.xticks(size=14, rotation=45, ha='right')
     plt.yticks(size=14)
     ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
