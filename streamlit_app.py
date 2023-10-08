@@ -598,10 +598,9 @@ def app():
 
     # set ylim to the max OK *or* Improved value rounded to the nearest hundred
     # if max_value >= 1,000, otherwise rounded to the nearest thousand
-    max_ok = max(df_dg_imp[False])
-    max_imp = max(df_dg_imp[True])
-    round_by = -2 if max(max_ok, max_imp) >= 1000 else -3
-    ax.set_ylim(0, round(max(max_ok, max_imp), round_by))
+    max_ok_imp = max(max(df_dg_imp[False]) * 1.1, max(df_dg_imp[True]) * 1.1)
+    round_by = -1 if max_ok_imp >= 100 else -2
+    ax.set_ylim(0, round(max_ok_imp), round_by)
 
     ax.set_title(f'Status per Requestor ({year})', size=16,
                  weight='bold', pad=60)
@@ -670,7 +669,9 @@ def app():
     # plot the bar chart
     fig, ax = plt.subplots()
     df_time.plot(kind='bar', ax=ax, color=['#0173b2'])
-    ax.set_ylim(0, round(max(df_time['counts']), -3))
+    max_counts = max(df_time['counts']) * 1.1
+    round_by = -2 if max_counts >= 1000 else -3
+    ax.set_ylim(0, round(max_counts, round_by))
     ax.set_title(f'Time needed ({year})', size=16,
                  weight='bold', pad=60)
     ax.text(0.5, 1.125, f'Total documents checked: {total:,}',
