@@ -610,7 +610,7 @@ def app():
     # if max_value >= 1,000, otherwise rounded to the nearest thousand
     max_ok_imp = max(max(df_dg_imp[False]) * 1.1, max(df_dg_imp[True]) * 1.1)
     round_by = -1 if max_ok_imp >= 100 else -2
-    ax.set_ylim(0, round(max_ok_imp), round_by)
+    ax.set_ylim(0, round(max_ok_imp, round_by))
 
     ax.set_title(f'Status per Requestor ({year})', size=16,
                  weight='bold', pad=60)
