@@ -466,21 +466,47 @@ def app():
     months = list(sorted(df_imp_month.index.tolist(), key=C.MONTHS.index))
     df_imp_month = df_imp_month.reindex(months, fill_value=0, method=None)
 
+    with st.expander('**Options**', expanded=True):
+        plot_type = st.selectbox('Select plot type',
+                                 options=['Bar', 'Line'], index=0)
+
     fig, ax = plt.subplots()
-    df_imp_month.plot(kind='bar', ax=ax, color=['#0173b2', '#de8f05'])
-    ax.set_ylim(0, round(max(df_imp_month.sum(axis=1)), -2))
+
+    plot_type = plot_type.lower()
+    df_imp_month.plot(kind=plot_type, ax=ax, color=['#0173b2', '#de8f05'])
+    if plot_type == 'line':
+        # prevent xtick labels from hiding from the x-axis
+        ax.set_xticks(range(len(df_imp_month.index)))
+        ax.set_xticklabels(df_imp_month.index[::1])  # https://saturncloud.io/blog/how-to-show-more-ticks-on-the-xaxis-in-pandas-plot/
+        for i in ax.lines:
+            i.set_marker('o')
+
+    max_value = max(max(df_imp_month[True]), max(df_imp_month[False]))
+    ax.set_ylim(0, round(max_value * 1.1, -2))
+    # give some space on the left and the right of the plot
+    # ax.set_xlim(df_imp_month.index[0] - pd.Timedelta(days=1),
+    #             df_imp_month.index[-1] + pd.Timedelta(days=1))
     ax.set_title(f'Improved vs OK per month ({year})', size=16,
                  weight='bold', pad=60)
     ax.text(0.5, 1.125, f'Total documents checked: {total:,}',
             transform=ax.transAxes, size=14, ha='center')
 
     # show the values on top of the bars where their color matches the bar's
-    for p in ax.patches:
-        color = '#0173b2' if p.get_facecolor() == rgba_value else '#de8f05'
-        ax.annotate(f'{p.get_height():,}', (p.get_x() + p.get_width() / 2.,
-                                            p.get_height()),
-                    ha='center', va='center', size=14, color=color,
-                    xytext=(0, 10), textcoords='offset points')
+    if plot_type == 'bar':
+        for p in ax.patches:
+            color = '#0173b2' if p.get_facecolor() == rgba_value else '#de8f05'
+            annotation_text = f'{p.get_height():,}'
+            annotation_xy = (p.get_x() + p.get_width() / 2, p.get_height())
+            ax.annotate(annotation_text, annotation_xy,
+                        ha='center', va='center', size=12, color=color,
+                        xytext=(0, 6), textcoords='offset points')
+    elif plot_type == 'line':
+        for i, p in enumerate(ax.lines):
+            # plot a line between the y values of each x value
+            for x, y in zip(p.get_xdata(), p.get_ydata()):
+                ax.annotate(f'{y:,}', (x, y), ha='center', va='bottom',
+                            xytext=(0, 6), textcoords='offset points',
+                            size=12, color=p.get_color())
 
     # Labels based on `improve_labels` but with the total number
     # of requests for the year along with the percentage, e.g.:
