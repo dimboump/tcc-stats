@@ -769,6 +769,56 @@ def app():
     fig.set_size_inches(len(uploaded_months) * 1.5, 6)  # no overlapping labels
     st.pyplot(fig, clear_figure=True)
 
+    if mark_trainees:
+        st.divider()
+
+        st.markdown("#### Trainees' Contribution")
+        st.subheader('')
+
+        df_trainees = df.groupby(['month', 'trainee']).size().unstack()
+        df_trainees = df_trainees.fillna(0)
+        df_trainees = df_trainees.astype(int)
+        df_trainees = df_trainees.reindex(months, fill_value=0, method=None)
+
+        # plot the bar chart to show the number of trainees vs staff
+        # per month
+        fig, ax = plt.subplots()
+        df_trainees.plot(kind='bar', ax=ax, color=['#0173b2', '#de8f05'])
+        max_trainees = max(df_trainees[True] * 1.1)
+        max_staff = max(df_trainees[False] * 1.1)
+        round_by = -1 if max(max_trainees, max_staff) >= 100 else -2
+        ax.set_ylim(0, round(max(max_trainees, max_staff), round_by))
+        ax.set_title(f"Trainees' Contribution ({year})", size=16,
+                     weight='bold', pad=60)
+        ax.text(0.5, 1.125, f'Total documents checked: {total:,}',
+                transform=ax.transAxes, size=14, ha='center')
+        # show the values on top of the bars
+        for p in ax.patches:
+            color = '#0173b2' if p.get_facecolor() == rgba_value else '#de8f05'
+            ax.annotate(f'{p.get_height():,}',
+                        (p.get_x() + p.get_width() / 2, p.get_height()),
+                        ha='center', va='center', size=12, color=color,
+                        xytext=(0, 6), textcoords='offset points')
+
+        plt.xlabel('')
+        plt.xticks(size=14, rotation=45, ha='right')
+        plt.yticks(size=14)
+
+        ax.set_yticklabels([f'{int(y):,}' for y in ax.get_yticks()])
+        trainees_counts = df_trainees[True].sum()
+        staff_counts = df_trainees[False].sum()
+        total = trainees_counts + staff_counts
+        trainees_perc = round(trainees_counts / total * 100, 1)
+        staff_perc = round(staff_counts / total * 100, 1)
+        _labels = [f'Trainees - {trainees_counts:,} ({trainees_perc}%)',
+                   f'Staff - {staff_counts:,} ({staff_perc}%)']
+        ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.1),
+                  labels=_labels, ncol=len(_labels),
+                  prop={'weight': 'bold', 'size': 14})
+
+        fig.set_size_inches(len(uploaded_months) * 1.5, 6)  # no overlapping labels
+        st.pyplot(fig, clear_figure=True)
+
 
 if __name__ == '__main__':
     app()
