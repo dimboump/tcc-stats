@@ -679,11 +679,6 @@ def app():
     # show the values on top of the bars
     for p in ax.patches:
         color = '#0173b2'
-        try:
-            requestor_total = \
-                df_time[df_time.index == p.get_x()].sum(axis=1).values[0]
-        except IndexError:
-            requestor_total = 0
         ax.annotate(f'{p.get_height():,}',
                     (p.get_x() + p.get_width() / 2, p.get_height()),
                     ha='center', va='center', size=12, color=color,
