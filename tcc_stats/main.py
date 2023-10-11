@@ -72,11 +72,6 @@ def get_args() -> argparse.Namespace:
         )
     )
 
-    extract_parser.add_argument(
-        '-v', '--verbose', action='store_true',
-        help="Print more information about the data along with a small sample."
-    )
-
     # `plot` command
     plot_parser = add_cmd(
         'plot',
