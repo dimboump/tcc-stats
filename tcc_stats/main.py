@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import pathlib
-from typing import Sequence
+from collections.abc import Sequence
 
 import tcc_stats.constants as C
 from tcc_stats.color import COLORS
@@ -70,11 +70,6 @@ def get_args() -> argparse.Namespace:
             "exist, the (sub)directories will be created. Allowed extentions: "
             f"{C.ALLOWED_EXCEL + ('.csv',)}. (default: `%(default)s`)"
         )
-    )
-
-    extract_parser.add_argument(
-        '-v', '--verbose', action='store_true',
-        help="Print more information about the data along with a small sample."
     )
 
     # `plot` command

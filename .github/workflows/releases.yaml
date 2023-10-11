@@ -21,28 +21,7 @@ jobs:
         with:
           fetch-depth: 0 # This ensures all commits and tags are fetched
 
-      - name: Generate release notes
-        id: release_notes
-        run: |
-          TAG_NAME=${{  github.ref_name }}
-          LATEST_SHA=$(gh release view latest --json publishedAt -q ".publishedAt") || true
-          if [ -z "$LATEST_SHA" ]; then
-            NOTES=$(git log --pretty=format:"%s" $(git rev-list --max-parents=0 HEAD)..HEAD)
-          else
-            NOTES=$(git log --pretty=format:"%s" $LATEST_SHA..HEAD)
-          fi
-          INTRO="Version $TAG_NAME contains the following changes and improvements:"
-          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "text<<EOF"$'\n'"$INTRO"$'\n'"$NOTES"$'\n'EOF >> $GITHUB_OUTPUT
-
       - name: Create Release
         run: |
           TAG_NAME=${{  github.ref_name }}
-          gh release create $TAG_NAME -t $TAG_NAME -n "${{ steps.release_notes.outputs.notes }}" --target main
-
-      - name: Move 'latest' tag
-        run: |
-          git tag -d latest || true # Delete local 'latest' tag if exists
-          git push origin :refs/tags/latest || true # Delete remote 'latest' tag if exists
-          git tag latest
-          git push origin refs/tags/latest
+          gh release create $TAG_NAME -t $TAG_NAME -n 'Release $TAG_NAME' --target main

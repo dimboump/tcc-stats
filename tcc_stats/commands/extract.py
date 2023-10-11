@@ -3,8 +3,8 @@ from __future__ import annotations
 import argparse
 import pathlib
 import sys
+from collections.abc import Sequence
 from datetime import datetime
-from typing import Sequence
 
 import pandas as pd
 from pandas import to_datetime as pd_to_dt
@@ -60,7 +60,6 @@ def get_current_data(
     *,
     year: int = datetime.now().year,
     months: int | Sequence[int] = 0,
-    verbose: bool = False
 ) -> pd.DataFrame:
     """Get a Pandas DataFrame of the data for the current year."""
 
@@ -84,12 +83,6 @@ def get_current_data(
             df = pd.concat([df, df_temp], ignore_index=True)
         continue
 
-    if verbose:
-        df.info()
-        print()
-        sample_size = min(10, len(df))
-        print(df.sample(sample_size))
-
     return df
 
 
@@ -98,7 +91,6 @@ def get_history_data(
     *,
     years: Sequence[int] | set[int] | None = None,
     months: int | Sequence[int],
-    verbose: bool = False
 ) -> pd.DataFrame:
     """Get a Pandas DataFrame of the data for the previous year(s)."""
 
@@ -148,12 +140,6 @@ def get_history_data(
                                color='green')
             color.step("[Closing]", start=filename, color='yellow')
 
-    if verbose:
-        df.info()
-        print()
-        sample_size = min(10, len(df))
-        print(df.sample(sample_size))
-
     return df
 
 
@@ -163,18 +149,8 @@ def preprocess_data(
     confidentials: bool = True,
     mark_trainees: bool = False,
     staff: set[str] | Sequence[str] = C.TCCERS,
-    verbose: bool = False
 ) -> pd.DataFrame:
     """Perform preprocessing of the data for statistical analysis."""
-
-    if verbose:
-        print(C.SEP_EQ, "Initial DataFrame:", sep="\n", end="\n\n")
-        print(C.SEP_DASH, "INFO:", C.SEP_EQ, sep="\n")
-        df.info()
-        print()
-        print(C.SEP_DASH, "SAMPLE:", C.SEP_EQ, sep="\n")
-        sample_size = min(5, len(df))
-        print(df.sample(sample_size))
 
     # Remove unnecessary columns
     df = df.drop(['fdr_no', 'source_lang', 'target_lang'], axis=1)
@@ -219,15 +195,6 @@ def preprocess_data(
          if col not in ('requester_code', 'dg_code')]
     df = df[cols]
 
-    if verbose:
-        print(C.SEP_EQ, "Final DataFrame:", sep="\n", end="\n\n")
-        print(C.SEP_DASH, "INFO:", C.SEP_EQ, sep="\n")
-        df.info()
-        print()
-        print(C.SEP_DASH, "SAMPLE:", C.SEP_EQ, sep="\n")
-        sample_size = min(5, len(df))
-        print(df.sample(sample_size))
-
     return df
 
 
@@ -235,20 +202,17 @@ def extract(args: argparse.Namespace) -> int:
     path = preprocess_path(args.path)
     years = set(args.years)
     months = args.months
-    verbose = args.verbose
     output = args.output
 
     df = pd.DataFrame()
-    pd.set_option('display.width', C.CLI_WIDTH)
 
     current_year = datetime.now().year
     if current_year in years:
-        df = get_current_data(path, months=months, verbose=verbose)
+        df = get_current_data(path, months=months)
         years.remove(current_year)
 
-    df = pd.concat([df, get_history_data(path, years=years, months=months,
-                                         verbose=verbose)])
-    df = preprocess_data(df, verbose=verbose)
+    df = pd.concat([df, get_history_data(path, years=years, months=months)])
+    df = preprocess_data(df)  # no verbose
 
     if output:
         output = pathlib.Path(output)
@@ -265,7 +229,9 @@ def extract(args: argparse.Namespace) -> int:
                 Only Excel and CSV files are supported."""
             )
             return 1
+
         print()
         relative_path = output.absolute().relative_to(C.CWD)
         color.step("Saved", start=f"Saving {relative_path}", color='green')
+
     return 0
