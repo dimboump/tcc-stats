@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import calendar
+import importlib.metadata
 import os
 import pathlib
 from datetime import datetime
 
+VERSION = importlib.metadata.version('tcc_stats')
 ALLOWED_EXCEL = ('.xlsx', '.xls', '.xlsm', '.xlsb')
 COMMANDS = ('extract', 'plot')
 
