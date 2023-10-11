@@ -354,7 +354,7 @@ def app():
     total = len(df)
 
     def pie_fmt(x):
-        return '{:.1f}%\n({:.0f})'.format(x, total * x / 100)
+        return f'{x:.1f}%\n({total * x / 100:.0f})'
 
     with lcol2_1:
         st.subheader('')

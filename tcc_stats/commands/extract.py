@@ -3,8 +3,8 @@ from __future__ import annotations
 import argparse
 import pathlib
 import sys
+from collections.abc import Sequence
 from datetime import datetime
-from typing import Sequence
 
 import pandas as pd
 from pandas import to_datetime as pd_to_dt

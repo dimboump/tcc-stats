@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import pathlib
-from typing import Sequence
+from collections.abc import Sequence
 
 import tcc_stats.constants as C
 from tcc_stats.color import COLORS
